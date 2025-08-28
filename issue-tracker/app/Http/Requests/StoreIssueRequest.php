@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Issue;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreIssueRequest extends FormRequest
@@ -11,7 +12,7 @@ class StoreIssueRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +23,12 @@ class StoreIssueRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'project_id' => ['requiresd', 'exists:projects,id'],
+            'title' => ['required', 'string', 'max:255'],
+            'description' => ['nullable', 'string'],
+            'status' => ['required', 'in:'.implode(',', Issue::STATUS)],
+            'priority' => ['required', 'in:'.implode(',', Issue::PRIORITY)],
+            'due_date' => ['nullable', 'date']
         ];
     }
 }

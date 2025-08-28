@@ -11,7 +11,7 @@ class StoreCommentRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return false;
+        return true;
     }
 
     /**
@@ -22,7 +22,8 @@ class StoreCommentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            //
+            'name' => ['required', 'string', 'max:50', 'uniqueLtags,name'],
+            'color' => ['nullable', 'string', 'max:20'],
         ];
     }
 }
