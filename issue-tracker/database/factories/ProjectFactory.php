@@ -16,8 +16,13 @@ class ProjectFactory extends Factory
      */
     public function definition(): array
     {
+        $start = $this->faker->dateTimeBetween('-2 months', 'now');
+        $end = (clone $start)->modify('+' . rand(10, 60) . ' days');
         return [
-            //
+            'name' => $this->faker->sentence(3),
+            'description' => $this->faker->paragraph(),
+            'start_date' => $start,
+            'deadline' => $end,
         ];
     }
 }
