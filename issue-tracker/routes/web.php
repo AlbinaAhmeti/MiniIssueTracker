@@ -1,7 +1,25 @@
 <?php
-
+use App\Http\Controllers\ProjectController;
+use App\Http\Controllers\IssueController;
+use App\Http\Controllers\TagController;
+use App\Http\Controllers\CommentController;
+use App\Http\Controllers\IssueTagController;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
+Route::redirect('/', '/projects');
+
+Route::resource('projects', ProjectController::class);
+
+Route::resource('projects.issues', IssueController::class)->shallow();
+
+Route::get('/issues', [IssueController::class, 'index'])->name('issues.index');
+
+Route::resource('projects.issues', IssueController::class)->shallow();
+
+Route::resource('tags', TagController::class)->only(['index','store']);
+
+Route::get('/issues/{issue}/comments', [CommentController::class, 'index'])->name('issues.comments.index');
+Route::post('/issues/{issue}/comments', [CommentController::class, 'store'])->name('issues.comments.store');
+
+Route::post('/issues/{issue}/tags', [IssueTagController::class, 'attach'])->name('issues.tags.attach');
+Route::delete('/issues/{issue}/tags/{tag}', [IssueTagController::class, 'detach'])->name('issues.tags.detach');
