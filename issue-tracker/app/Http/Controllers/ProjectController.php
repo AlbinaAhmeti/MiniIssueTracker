@@ -8,34 +8,62 @@ use App\Http\Requests\ProjectRequest;
 
 class ProjectController extends Controller
 {
-    public function index() {
+    public function index()
+    {
         $projects = Project::withCount('issues')->latest()->paginate(10);
         return view('projects.index', compact('projects'));
     }
 
-    public function create() { return view('projects.create'); }
-
-    public function store(ProjectRequest $request) {
-        $project = Project::create($request->validated());
-        return redirect()->route('projects.show', $project)->with('success','Project created.');
+    public function create()
+    {
+        $this->authorize('create', Project::class);
+        return view('projects.create');
     }
 
-    public function show(Project $project) {
-        // Shfaq projektin me issues (eager load për të shmangur N+1)
+    public function store(ProjectRequest $request)
+    {
+        $this->authorize('create', Project::class);
+        $data = $request->validated();
+
+        $project = $request->user()->ownedProjects()->create($data);
+
+        return redirect()
+            ->route('projects.show', $project)
+            ->with('success', 'Project created.');
+    }
+
+    public function show(Project $project)
+    {
         $issues = $project->issues()->with(['tags'])->withCount('comments')->latest()->paginate(10);
-        return view('projects.show', compact('project','issues'));
+        return view('projects.show', compact('project', 'issues'));
     }
 
-    public function edit(Project $project) { return view('projects.edit', compact('project')); }
+    public function edit(Project $project)
+    {
+        $this->authorize('update', $project);
+        return view('projects.edit', compact('project'));
+    }
 
-    public function update(ProjectRequest $request, Project $project) {
+    public function update(ProjectRequest $request, Project $project)
+    {
+        $this->authorize('update', $project);
         $project->update($request->validated());
-        return redirect()->route('projects.show', $project)->with('success','Project updated.');
+        return redirect()->route('projects.show', $project)->with('success', 'Project updated.');
     }
 
-    public function destroy(Project $project) {
+    public function destroy(Project $project)
+    {
+        $this->authorize('delete', $project);
         $project->delete();
-        return redirect()->route('projects.index')->with('success','Project deleted.');
+        return redirect()->route('projects.index')->with('success', 'Project deleted.');
+    }
+
+    public function __construct()
+    {
+        $this->middleware('auth')->except(['index', 'show']);
+
+        $this->authorizeResource(\App\Models\Project::class, 'project', [
+            'except' => ['index', 'show']
+        ]);
     }
 }
-

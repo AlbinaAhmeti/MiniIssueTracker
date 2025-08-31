@@ -2,18 +2,22 @@
 
 namespace Database\Factories;
 
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
  * @extends \Illuminate\Database\Eloquent\Factories\Factory<\App\Models\Project>
  */
-class ProjectFactory extends Factory {
-    public function definition(): array {
+class ProjectFactory extends Factory
+{
+    public function definition(): array
+    {
         return [
+            'owner_id'    => User::factory(),
             'name' => $this->faker->sentence(3),
             'description' => $this->faker->paragraph(),
-            'start_date' => now()->subDays(rand(0,30))->toDateString(),
-            'deadline' => now()->addDays(rand(10,60))->toDateString(),
+            'start_date' => now()->subDays(rand(0, 30))->toDateString(),
+            'deadline' => now()->addDays(rand(10, 60))->toDateString(),
         ];
     }
 }

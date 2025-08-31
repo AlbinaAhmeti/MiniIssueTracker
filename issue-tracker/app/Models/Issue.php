@@ -1,23 +1,31 @@
 <?php
 
 namespace App\Models;
+
 use App\Enums\IssueStatus;
 use App\Enums\IssuePriority;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 use Illuminate\Database\Eloquent\Model;
 
 class Issue extends Model
 {
-     use HasFactory;
+    use HasFactory;
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
     protected $fillable = [
         'project_id',
         'title',
         'description',
         'status',
         'priority',
-        'due_date'
+        'due_date',
+        'created_by'
     ];
 
     protected $casts = [
@@ -47,5 +55,10 @@ class Issue extends Model
         $q->when($filters['due_before'] ?? null, fn($qq, $v) => $qq->whereDate('due_date', '<=', $v));
         $q->when(($filters['overdue'] ?? null) === '1', fn($qq) => $qq->whereDate('due_date', '<', now())->where('status', '!=', 'closed'));
         return $q;
+    }
+
+    public function users(): BelongsToMany
+    {
+        return $this->belongsToMany(\App\Models\User::class)->withTimestamps();
     }
 }

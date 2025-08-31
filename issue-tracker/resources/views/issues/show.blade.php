@@ -94,16 +94,42 @@ $dueText = 'Overdue';
 
     <div class="mt-5 flex items-center justify-between">
       <h2 class="text-lg font-semibold">Tags</h2>
+
+      @auth
+      @can('manageTags', $issue)
       <button id="btn-manage-tags"
         class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500
-                   px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:shadow-md active:translate-y-px">
+               px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:shadow-md active:translate-y-px">
         Manage Tags
       </button>
+      @endcan
+      @endauth
     </div>
+
 
     <div id="tag-pills" class="mt-2">
       @include('issues._tag_pills',['issue'=>$issue])
     </div>
+
+    <div class="mt-6 flex items-center justify-between">
+      <h2 class="text-lg font-semibold">Members</h2>
+
+      @auth
+      @can('manageMembers', $issue)
+      <button id="btn-manage-members"
+        class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500
+               px-3 py-2 text-sm font-medium text-white shadow-sm transition hover:shadow-md">
+        Manage Members
+      </button>
+      @endcan
+      @endauth
+    </div>
+
+
+    <div id="member-pills" class="mt-2">
+      @include('issues._member_pills',['issue'=>$issue])
+    </div>
+
   </div>
 
   <div class="mt-6">
@@ -201,29 +227,55 @@ $dueText = 'Overdue';
     </div>
   </div>
 
+  <div id="member-modal"
+    class="fixed inset-0 z-50 hidden flex items-center justify-center p-4
+            bg-black/40 backdrop-blur-sm">
+    <div data-dialog
+      class="w-full max-w-md origin-center rounded-2xl border border-slate-200 bg-white/90
+              p-5 shadow-2xl ring-1 ring-white/60 transition duration-200 ease-out
+              opacity-0 scale-95">
+      <div class="mb-3 flex items-center justify-between">
+        <h3 class="flex items-center gap-2 text-sm font-semibold text-slate-800">
+          <span class="inline-block h-2.5 w-2.5 rounded-full bg-indigo-500"></span>
+          Attach a member
+        </h3>
+        <button id="close-member-modal"
+          class="rounded-full p-1.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+          aria-label="Close">
+          ✕
+        </button>
+      </div>
 
-  <div class="flex items-end gap-2">
-    <label class="sr-only" for="tag-select">Tag</label>
-    <select id="tag-select"
-      class="flex-1 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 shadow-sm transition
+      <div class="space-y-3">
+        <div id="member-preview"
+          class="hidden items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs text-slate-800 ring-1 ring-slate-200">
+          <span id="member-preview-dot" class="h-2.5 w-2.5 rounded-full"></span>
+          <span id="member-preview-name" class="font-medium"></span>
+        </div>
+
+        <div class="flex items-end gap-2">
+          <label class="sr-only" for="member-select">Member</label>
+          <select id="member-select"
+            class="flex-1 rounded-xl border border-slate-200 bg-white/70 px-3 py-2 shadow-sm transition
                        focus:outline-none focus:ring-2 focus:ring-indigo-500/60 focus:border-indigo-500">
-      @foreach($allTags as $t)
-      <option value="{{ $t->id }}" data-color="{{ $t->color ?? '#64748b' }}">
-        {{ $t->name }}
-      </option>
-      @endforeach
-    </select>
+            @foreach($allUsers as $u)
+            <option value="{{ $u->id }}">{{ $u->name }} </option>
+            {{ $u->name }}
+            </option>
+            @endforeach
+          </select>
 
-    <button id="btn-attach-tag"
-      data-attach-url="{{ route('issues.tags.attach',$issue) }}"
-      class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500
+          <button id="btn-attach-member"
+            data-attach-url="{{ route('issues.members.attach',$issue) }}"
+            class="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-500 to-violet-500
                        px-4 py-2 text-sm font-medium text-white shadow-sm transition hover:shadow-md active:translate-y-px">
-      Attach
-    </button>
+            Attach
+          </button>
+        </div>
+      </div>
+    </div>
   </div>
-  </div>
-  </div>
-  </div>
+
 
 
   <script>
@@ -373,6 +425,88 @@ $dueText = 'Overdue';
       }
       sel?.addEventListener('change', updatePreview);
       updatePreview();
+    })();
+
+    (function() {
+      const csrf = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+      const mModal = document.getElementById('member-modal');
+      const mDialog = mModal?.querySelector('[data-dialog]');
+      const openM = document.getElementById('btn-manage-members');
+      const closeM = document.getElementById('close-member-modal');
+      const mSel = document.getElementById('member-select');
+      const attachBtn = document.getElementById('btn-attach-member');
+      const clearBtn = document.getElementById('btn-clear-members');
+
+      function openMember() {
+        mModal.classList.remove('hidden');
+        requestAnimationFrame(() => mDialog.classList.remove('opacity-0', 'scale-95'));
+        setTimeout(() => mSel?.focus(), 50);
+      }
+
+      function closeMember() {
+        mDialog.classList.add('opacity-0', 'scale-95');
+        mDialog.addEventListener('transitionend', () => mModal.classList.add('hidden'), {
+          once: true
+        });
+      }
+
+      openM?.addEventListener('click', openMember);
+      closeM?.addEventListener('click', closeMember);
+      clearBtn?.addEventListener('click', () => {
+        [...mSel.options].forEach(o => o.selected = false);
+        mSel.focus();
+      });
+
+      attachBtn?.addEventListener('click', async () => {
+        const selected = [...mSel.selectedOptions].map(o => o.value);
+        if (selected.length === 0) return;
+
+        attachBtn.disabled = true;
+        attachBtn.classList.add('opacity-70', 'cursor-not-allowed');
+
+        const r = await fetch(attachBtn.dataset.attachUrl, {
+          method: 'POST',
+          headers: {
+            'X-CSRF-TOKEN': csrf,
+            'Accept': 'application/json',
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify({
+            user_id: selected
+          })
+        });
+
+        attachBtn.disabled = false;
+        attachBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+
+        if (!r.ok) return;
+        const d = await r.json();
+
+        document.getElementById('member-pills').innerHTML = d.html;
+
+        [...mSel.options].forEach(o => {
+          if (selected.includes(o.value)) o.remove();
+        });
+
+        mSel.focus();
+      });
+
+      document.getElementById('member-pills')?.addEventListener('click', async (e) => {
+        const btn = e.target.closest('[data-detach-url]');
+        if (!btn) return;
+        const r = await fetch(btn.dataset.detachUrl, {
+          method: 'DELETE',
+          headers: {
+            'X-CSRF-TOKEN': csrf,
+            'Accept': 'application/json'
+          }
+        });
+        if (!r.ok) return;
+        const d = await r.json();
+        document.getElementById('member-pills').innerHTML = d.html;
+
+      });
     })();
   </script>
 
